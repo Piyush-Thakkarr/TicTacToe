@@ -1,45 +1,72 @@
-document.addEventListener('DOMContentLoaded', () => {
-const cells = document.querySelectorAll('.cell');
-const resetButton = document.getElementById('resetButton');
-let currentPlayer = 'X'; 
-let gameActive = true;
-let waitingForCPU = false;
+document.addEventListener('DOMContentLoaded', () => 
+{
+    const cells = document.querySelectorAll('.cell');
+    const resetButton = document.getElementById('resetButton');
+    const statusDisplay = document.querySelector('.status');
+    const scoreXElement = document.getElementById('scoreX');
+    const scoreOElement = document.getElementById('scoreO');
+    const modal = document.getElementById('gameOverModal');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalButton = document.getElementById('modalButton');
 
-function resetGame() {
+    let currentPlayer = 'X'; 
+    let gameActive = true;
+    let scores = { X: 0, O: 0 };
+
+    scoreXElement.textContent = '0';
+    scoreOElement.textContent = '0';
+
+    modalButton.addEventListener('click', () => {
+    modal.style.display = 'none';
+    resetGame();
+});
+
+    function updateStatus() {
+    if (!gameActive) return;
+    statusDisplay.textContent = `Player ${currentPlayer}'s turn`;
+}
+
+    function resetGame() {
     cells.forEach(cell => {
         cell.textContent = '';
+        cell.classList.remove('x', 'o', 'winner');
     });
     currentPlayer = 'X';
     gameActive = true;
     waitingForCPU = false;
+    updateStatus();
 }
 
-// Add event listener for reset button
-resetButton.addEventListener('click', resetGame); 
+    resetButton.addEventListener('click', resetGame); 
 
-function getEmptyCells() {
+    function getEmptyCells() 
+    {
     return Array.from(cells).map((cell, index) => 
         cell.textContent === '' ? index : null
     ).filter(val => val !== null);
 }
 
-function makeCPUMove() {
-    const emptyCells = getEmptyCells();
-    if (emptyCells.length > 0) {
-        const randomIndex = Math.floor(Math.random() * emptyCells.length);
-        const cellIndex = emptyCells[randomIndex];
-        cells[cellIndex].textContent = currentPlayer;
-        checkWin();
-        checkDraw();
+    function makeCPUMove() 
+    {
+        const emptyCells = getEmptyCells();
+        if (emptyCells.length > 0) 
+        {
+            const randomIndex = Math.floor(Math.random() * emptyCells.length);
+            const cellIndex = emptyCells[randomIndex];
+            const cell = cells[cellIndex];
         
-        if (gameActive) {
+            cell.textContent = currentPlayer;
+            cell.classList.add('o');
+        
+        if (!checkWin() && !checkDraw() && gameActive) 
+        {
             currentPlayer = 'X';
-        } else {
-            // If game is over, don't switch back to player
+            updateStatus();
+        } else if (!gameActive) 
+        {
             currentPlayer = '';
         }
     }
-    waitingForCPU = false;
 }
 
 const winningConditions = 
@@ -53,45 +80,63 @@ const winningConditions =
     [0, 4, 8],
     [2, 4, 6]
 ]; 
-function checkWin() 
-{
-    for (let combo of winningConditions) 
+    function showGameOver(message) 
     {
+    modalMessage.textContent = message;
+    modal.style.display = 'flex';
+}
+
+    function checkWin() 
+    {
+    for (let combo of winningConditions) {
         const [a, b, c] = combo;
         if (cells[a].textContent === currentPlayer && 
             cells[b].textContent === currentPlayer && 
             cells[c].textContent === currentPlayer) 
         {
             gameActive = false;
-            alert(`${currentPlayer} wins!`);
-            return;
+            cells[a].classList.add('winner');
+            cells[b].classList.add('winner');
+            cells[c].classList.add('winner');
+            
+            scores[currentPlayer]++;
+            document.getElementById(`score${currentPlayer}`).textContent = scores[currentPlayer];
+            
+            setTimeout(() => showGameOver(`Player ${currentPlayer} wins!`), 500);
+            return true;
         }
     }
+    return false;
 }
-function checkDraw() {
-    const allfilled = [...cells].every(cell => cell.textContent !== '');
-    if (allfilled && gameActive) {
-        gameActive = false;
-        alert('Draw!');
-    }
-}
-cells.forEach(cell => 
-{
-    cell.addEventListener('click', () => 
+
+    function checkDraw() 
     {
-        if (cell.textContent !== '' || !gameActive || waitingForCPU || currentPlayer !== 'X') {
-            return;
-        }
+    const allFilled = [...cells].every(cell => cell.textContent !== '');
+    if (allFilled && gameActive) 
+    {
+        gameActive = false;
+        setTimeout(() => showGameOver('Game ended in a draw!'), 500);
+        return true;
+    }
+    return false;
+}
+    cells.forEach(cell => 
+    {
+        cell.addEventListener('click', () => 
+        {
+                if (cell.textContent !== '' || !gameActive || currentPlayer !== 'X') 
+            {
+                return;
+            }
         
-        // Make player's move
-        cell.textContent = currentPlayer; 
-        checkWin();
-        checkDraw();
+        cell.textContent = currentPlayer;
+        cell.classList.add('x');
         
-        if (gameActive) {
-            waitingForCPU = true;
+        if (!checkWin() && !checkDraw()) 
+        {
             currentPlayer = 'O';
-            setTimeout(makeCPUMove, 500);
+            updateStatus();
+            setTimeout(makeCPUMove, 300);
         }
     });
 });
